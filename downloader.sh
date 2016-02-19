@@ -2,6 +2,7 @@
 
 ################################################
 # file name: download.sh
+# version: 1.0
 # author: Shlomi Ben-David
 # email: shlomi.ben.david@gmail.com
 # creation date: 18/02/2016
