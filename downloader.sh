@@ -8,19 +8,10 @@
 # creation date: 18/02/2016
 ################################################
 
-# TODO:
-# show usage 					- completed
-# check environment:
-#	apps installed				- completed
-#	
-# get file size (from: user/web/local)
-# download the file
-# check file size status
-	
 # EXIT STATUS:
 # 0 - the download completed successfully
-# 2 - one of the applications is not installed
-# 3 - failed to get the file size (broken url)
+# 1 - one of the applications is not installed
+# 2 - failed to get the file size (broken link)
 
 
 function show_usage {
@@ -29,8 +20,10 @@ function show_usage {
 	echo "Download file and show its progress"
 
 	echo -e "\nOPTIONS:"
-	echo -e "-s, --save-to PATH\t\tsave file to PATH"
-	echo -e "-o, --output NAME\t\tsave file as NAME"
+	echo -e "-s, --save-to PATH\t\tother PATH to where to save the downloaded file" 
+	echo -e "\t\t\t\t(default: saves it in the current location)"
+	echo -e "-o, --output NAME\t\tnew NAME for the downloaded file"
+	echo -e "-h, --help\t\t\tshow this help"
 
 	exit 0
 }
@@ -51,9 +44,9 @@ function check_parameters {
 	fi
 
 	# if we received different name for the saved file 
-	if [[ ${FILE:-"NONE"} != "NONE" ]] ; then
-		FNAME="${FILE}"
-		WGET_PARAMS+=" -O ${LOCATION}/${FILE}"
+	if [[ ${NAME:-"NONE"} != "NONE" ]] ; then
+		FNAME="${NAME}"
+		WGET_PARAMS+=" -O ${LOCATION}/${NAME}"
 	else
 		FNAME=`basename ${URL}` 
 	fi
@@ -69,7 +62,7 @@ function check_environment {
 	do
 		if ! yum list installed ${app} &> /dev/null ; then
 			echo "'${app}' is not installed!" &>> ${LOG}
-			exit 2
+			exit 1
 		fi	
 	done
 }
@@ -83,7 +76,7 @@ function get_file_size {
 
 	if ! grep "Length" ${INFO_FILE} ; then 
 		echo "failed to get file size" &>> ${LOG}
-		exit 3
+		exit 2
 	fi
 		
 	SIZE=`grep "Length" ${INFO_FILE} | awk '{print $2}'`
@@ -112,8 +105,9 @@ function start_downloader {
 		sleep 1
 		
 		CURRENT_SIZE=`ls -ls ${LOCATION}/${FNAME} | awk '{print $6}'`
+		[[ ${CURRENT_SIZE} -eq ${TOTAL_SIZE} ]] && echo "# Done :-)"
 	done
-	) | zenity --title="${TITLE}" --text="${TEXT}" --percentage=0 --auto-close --progress
+	) | zenity --title="${TITLE}" --text="${TEXT}" --percentage=0 --progress
 	[[ $? -ne 0 ]] && clear_leftovers 
 
 }
@@ -151,16 +145,20 @@ do
 					shift 2
 					;;
 		-o | --output	)
-					FILE=${2}
-					echo "output file name: ${FILE}" &>> ${LOG}
+					NAME=${2}
+					echo "output file name: ${NAME}" &>> ${LOG}
 					shift 2
 					;;
+		-h | --help	)	
+					show_usage
+					;;
+
 		* 			) 
 					URL=${1}
-					shift
+					echo "url: ${URL}" &>> ${LOG}
 
 					# if file starts with (-) show usage and exit
-					[[ ${URL} == -* ]] && show_usage || echo "url: ${URL}" &>> ${LOG}
+					[[ ${URL} == -* ]] && show_usage || shift 
 					;;
 	esac		
 done
